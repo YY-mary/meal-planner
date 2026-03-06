@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能菜谱搭配系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', 'Noto Sans CJK SC', sans-serif;
+            background: linear-gradient(135deg, #f0fdf4 0%, #fef3c7 50%, #fce7f3 100%);
+            min-height: 100vh;
+            padding: 24px;
+            overflow-x: hidden;
+        }
+
+        .background-decoration {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .blob-1 {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            width: 384px;
+            height: 384px;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(60px);
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .blob-2 {
+            position: absolute;
+            bottom: -80px;
+            left: 80px;
+            width: 384px;
+            height: 384px;
+            background: radial-gradient(circle, rgba(249, 115, 22, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(60px);
+            animation: float 25s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-30px); }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .header-icon {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .chef-icon {
+            width: 32px;
+            height: 32px;
+            color: #059669;
+        }
+
+        h1 {
+            font-size: 36px;
+            font-weight: 700;
+            background: linear-gradient(to right, #047857, #d97706);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: #4b5563;
+        }
+
+        .main-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            padding: 32px;
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: fadeIn 0.8s ease-out 0.2s both;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 16px 24px;
+            background: linear-gradient(to right, #10b981, #059669);
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.4);
+            transform: translateY(-4px);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .meal-display {
+            margin-top: 32px;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        .dishes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .dish-card {
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .dish-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .protein-card {
+            background: linear-gradient(to bottom right, #fed7aa, #fef3c7);
+            border-color: #fbbf24;
+        }
+
+        .veggie-card {
+            background: linear-gradient(to bottom right, #dcfce7, #f0fdf4);
+            border-color: #86efac;
+        }
+
+        .staple-card {
+            background: linear-gradient(to bottom right, #fcd34d, #fef3c7);
+            border-color: #fcd34d;
+        }
+
+        .dish-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #4b5563;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .dish-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1f2937;
+            word-break: break-word;
+        }
+
+        .nutrition-tip {
+            background: linear-gradient(to right, #f0fdf4, #fef3c7);
+            border: 1px solid #86efac;
+            border-radius: 16px;
+            padding: 16px;
+        }
+
+        .nutrition-title {
+            font-weight: 600;
+            color: #059669;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .nutrition-text {
+            color: #374151;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .history-section {
+            animation: fadeIn 0.8s ease-out 0.4s both;
+        }
+
+        .history-title {
+            color: #4b5563;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 0 8px;
+            margin-bottom: 12px;
+        }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .history-time {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-bottom: 8px;
+        }
+
+        .history-dishes {
+            font-size: 14px;
+            color: #1f2937;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .dish-tag {
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .tag-protein {
+            color: #b45309;
+            background: rgba(249, 115, 22, 0.1);
+        }
+
+        .tag-veggie {
+            color: #059669;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .tag-staple {
+            color: #b45309;
+            background: rgba(251, 191, 36, 0.1);
+        }
+
+        .error-message {
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            border-radius: 16px;
+            padding: 16px;
+            color: #991b1b;
+            font-size: 14px;
+            margin-top: 24px;
+        }
+
+        .icon {
+            width: 18px;
+            height: 18px;
+            display: inline-block;
+            margin-right: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-decoration">
+        <div class="blob-1"></div>
+        <div class="blob-2"></div>
+    </div>
+
+    <div class="container">
+        <!-- 标题区域 -->
+        <div class="header">
+            <div class="header-icon">
+                <span style="font-size: 32px;">👨‍🍳</span>
+                <h1>智能菜谱搭配</h1>
+            </div>
+            <p class="subtitle">一键生成健康搭配 · 解放午餐选择困难</p>
+        </div>
+
+        <!-- 主卡片 -->
+        <div class="main-card">
+            <button class="generate-btn" id="generateBtn" onclick="generateMeal()">
+                <span id="buttonText">点击搭配菜谱</span>
+            </button>
+
+            <!-- 菜谱展示区域 -->
+            <div id="mealDisplay"></div>
+
+            <!-- 错误提示 -->
+            <div id="errorMessage"></div>
+        </div>
+
+        <!-- 历史记录 -->
+        <div class="history-section" id="historySection" style="display: none;">
+            <div class="history-title">最近搭配</div>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <script>
+        const dishes = {
+            vegetables: [
+                '清炒西兰花', '番茄炒蛋', '蒜蓉空心菜', '冬瓜汤', '清炒豆芽',
+                '醋溜土豆丝', '红烧茄子', '清蒸南瓜', '清炒菠菜', '胡萝卜炒蛋',
+                '冬瓜排骨汤', '青菜豆腐汤', '凉拌黄瓜', '清炒玉米', '香菇青菜'
+            ],
+            proteins: [
+                '水煮鸡胸肉', '清蒸鱼', '番茄牛肉', '清炒虾仁', '豆腐炒蛋',
+                '红烧猪肉', '清汤鸡块', '豆制品', '烤鱼', '白切鸡',
+                '清蒸蛋', '鱼豆腐汤', '瘦肉粥', '鸡蛋羹', '海带排骨'
+            ],
+            rice: [
+                '白米饭', '糙米饭', '黑米饭', '玉米饭', '薏米饭',
+                '红豆饭', '杂粮饭', '山药粥', '绿豆粥', '粗粮米饭',
+                '燕麦粥', '黑芝麻粥', '黄米粥', '小米粥', '八宝粥'
+            ]
+        };
+
+        let mealHistory = [];
+
+        function getRandomItem(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        async function generateMeal() {
+            const btn = document.getElementById('generateBtn');
+            const buttonText = document.getElementById('buttonText');
+            const mealDisplay = document.getElementById('mealDisplay');
+            const errorMessage = document.getElementById('errorMessage');
+
+            btn.disabled = true;
+            buttonText.innerHTML = '<span class="spinner"></span>生成中...';
+            mealDisplay.innerHTML = '';
+            errorMessage.innerHTML = '';
+
+            try {
+                const veggie = getRandomItem(dishes.vegetables);
+                const protein = getRandomItem(dishes.proteins);
+                const staple = getRandomItem(dishes.rice);
+
+                // 调用 Claude API 获取营养建议
+                const response = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-20250514",
+                        max_tokens: 300,
+                        messages: [
+                            {
+                                role: "user",
+                                content: `用户今天的健康搭配是：${protein}、${veggie}、${staple}。请用20-30个字简要说明这个搭配的营养优势。只需要说优势，不要其他内容。`
+                            }
+                        ],
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('API 调用失败');
+                }
+
+                const data = await response.json();
+                const nutrition = data.content[0].text;
+
+                const mealItem = {
+                    id: Date.now(),
+                    veggie,
+                    protein,
+                    staple,
+                    nutrition,
+                    time: new Date().toLocaleTimeString('zh-CN', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    })
+                };
+
+                // 更新历史记录
+                mealHistory.unshift(mealItem);
+                if (mealHistory.length > 5) {
+                    mealHistory.pop();
+                }
+
+                // 显示菜谱
+                displayMeal(mealItem);
+                updateHistory();
+
+            } catch (err) {
+                errorMessage.innerHTML = '<div class="error-message">❌ 生成失败，请检查网络连接后重试</div>';
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                buttonText.textContent = '点击搭配菜谱';
+            }
+        }
+
+        function displayMeal(meal) {
+            const mealDisplay = document.getElementById('mealDisplay');
+            mealDisplay.innerHTML = `
+                <div class="meal-display">
+                    <div class="dishes-grid">
+                        <div class="dish-card protein-card">
+                            <div class="dish-label">🔥 主菜</div>
+                            <div class="dish-name">${meal.protein}</div>
+                        </div>
+                        <div class="dish-card veggie-card">
+                            <div class="dish-label">❤️ 蔬菜</div>
+                            <div class="dish-name">${meal.veggie}</div>
+                        </div>
+                        <div class="dish-card staple-card">
+                            <div class="dish-label">⏱️ 主食</div>
+                            <div class="dish-name">${meal.staple}</div>
+                        </div>
+                    </div>
+                    <div class="nutrition-tip">
+                        <div class="nutrition-title">💡 营养提示</div>
+                        <div class="nutrition-text">${meal.nutrition}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateHistory() {
+            const historySection = document.getElementById('historySection');
+            const historyList = document.getElementById('historyList');
+
+            if (mealHistory.length === 0) {
+                historySection.style.display = 'none';
+                return;
+            }
+
+            historySection.style.display = 'block';
+            historyList.innerHTML = mealHistory.map(meal => `
+                <div class="history-item">
+                    <div class="history-time">🕐 ${meal.time}</div>
+                    <div class="history-dishes">
+                        <span class="dish-tag tag-protein">${meal.protein}</span>
+                        <span>+</span>
+                        <span class="dish-tag tag-veggie">${meal.veggie}</span>
+                        <span>+</span>
+                        <span class="dish-tag tag-staple">${meal.staple}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 页面加载时初始化
+        window.addEventListener('load', () => {
+            updateHistory();
+        });
+    </script>
+</body>
+</html>
